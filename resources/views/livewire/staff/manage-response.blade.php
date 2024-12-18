@@ -45,12 +45,18 @@
                             @if (!empty($progress->histories))
                                 @foreach ($progress->histories as $history)
                                     <li class="mb-4">
-                                        <div class="flex items-start space-x-2">
-                                            <span class="w-2 h-2 mt-1 bg-blue-500 rounded-full"></span>
-                                            <div>
-                                                <p class="text-sm text-gray-600">{{ $history['description'] }}</p>
-                                                <p class="text-xs text-gray-500">{{ $history['date'] }}</p>
+                                        <div class="flex items-start justify-between space-x-2">
+                                            <div class="flex items-start space-x-2">
+                                                <span class="w-2 h-2 mt-1 bg-blue-500 rounded-full"></span>
+                                                <div>
+                                                    <p class="text-sm text-gray-600">{{ $history['description'] }}</p>
+                                                    <p class="text-xs text-gray-500">{{ $history['date'] }}</p>
+                                                </div>
                                             </div>
+                                            <button wire:click="confirmDeleteProgress({{ $progress->id }})"
+                                                class="text-xs text-red-500 hover:underline">
+                                                Hapus
+                                            </button>
                                         </div>
                                     </li>
                                 @endforeach
@@ -61,6 +67,7 @@
                     <p class="text-sm text-gray-600">Belum ada riwayat progress perbaikan/penyelesaian apapun.</p>
                 @endif
             </div>
+
         </div>
     @else
         <p class="w-full text-sm text-center text-gray-600">Data laporan tidak ditemukan.</p>
@@ -87,4 +94,23 @@
             </div>
         </div>
     @endif
+
+    @if ($showDeleteProgressModal)
+        <div class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+            <div class="p-6 bg-white rounded-lg shadow-lg">
+                <h2 class="mb-4 text-lg font-bold">Konfirmasi Penghapusan</h2>
+                <p>Apakah Anda yakin ingin menghapus progress ini?</p>
+
+                <div class="flex justify-end mt-4 space-x-2">
+                    <button wire:click="$set('showDeleteProgressModal', false)" class="px-4 py-2 bg-gray-300 rounded">
+                        Batal
+                    </button>
+                    <button wire:click="deleteProgress" class="px-4 py-2 text-white bg-red-600 rounded">
+                        Hapus
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
 </div>

@@ -7,50 +7,55 @@ use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithStyles;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class ReportsExport implements FromCollection, WithHeadings, WithMapping
+class ReportsExport implements FromCollection, WithHeadings, WithMapping, WithStyles
 {
     private $filteredDate;
 
     /**
-     * Konstruktor untuk menerima filter tanggal.
+     * Constructor to accept date filtering.
      *
-     * @param string|null $filteredDate
+     * @param array|null $dateRange
      */
-    public function __construct($filteredDate = null)
+    public function __construct($dateRange = null)
     {
-        $this->filteredDate = $filteredDate;
+        $this->filteredDate = $dateRange;
     }
 
     /**
-     * Mengambil data yang difilter berdasarkan tanggal.
+     * Retrieve filtered reports.
      *
      * @return \Illuminate\Support\Collection
      */
     public function collection()
     {
-        $query = Report::query();
+        $query = Report::query()->with(['user', 'response']);
 
-        // Apply the filtered date if provided
+        // Apply date range filtering if provided
         if ($this->filteredDate) {
-            // Ensure filteredDate is in the proper format (Y-m-d)
-            $date = Carbon::parse($this->filteredDate)->format('Y-m-d');
-            $query->whereDate('created_at', $date);
+            $query->whereBetween('created_at', [
+                $this->filteredDate['start'],
+                $this->filteredDate['end']
+            ]);
         }
 
-        // Fetch the reports
+        // Optional: Add ordering
+        $query->orderBy('created_at', 'desc');
+
         return $query->get();
     }
 
     /**
-     * Mendefinisikan heading untuk file Excel.
+     * Define headings for Excel file.
      *
      * @return array
      */
     public function headings(): array
     {
         return [
-            "#",
+            "ID",
             "Email Pelapor",
             "Gambar",
             "Lokasi Laporan",
@@ -63,41 +68,60 @@ class ReportsExport implements FromCollection, WithHeadings, WithMapping
     }
 
     /**
-     * Memetakan setiap baris data menjadi format untuk file Excel.
+     * Map report data for Excel export.
      *
      * @param \App\Models\Report $report
      * @return array
      */
     public function map($report): array
     {
-        // Get the voting data and count the total votes
-        $voteData = $report->voting;
-        $totalVote = is_array($voteData) ? count($voteData) : null;
+        // Safely get vote count
+        $totalVote = optional($report->voting)->count() ?? 0;
 
-        // Get the user's email (if available)
-        $userEmail = $report->user->email ?? "Tidak ada email";
+        // Safely get user email
+        $userEmail = optional($report->user)->email ?? 'Tidak ada email';
 
-        // Format the report's created_at date using Carbon
-        $reportDate = Carbon::parse($report->created_at)->translatedFormat('d F Y');
+        // Format date with fallback
+        $reportDate = $report->created_at
+            ? Carbon::parse($report->created_at)->translatedFormat('d F Y')
+            : 'Tanggal Tidak Tersedia';
 
-        // Concatenate the location details into a single string
-        $location = implode('->', [
-            $report->province,
-            $report->subdistrict,
-            $report->regency,
-            $report->village,
-        ]);
+        // Construct location with null checks
+        $location = implode(' -> ', array_filter([
+            $report->province ?? '',
+            $report->subdistrict ?? '',
+            $report->regency ?? '',
+            $report->village ?? '',
+        ]));
 
         return [
             $report->id,
             $userEmail,
-            $report->image,
-            $location,
-            ($totalVote === null || $totalVote === 0) ? 'Kosong' : $totalVote,
-            $report->description,
-            $reportDate,  // Formatted date
-            $report->response->response_status ?? 'Tidak ada status',  // Default response status if null
-            $report->response->staf_id ?? 'Tidak ada staf',  // Default staf_id if null
+            $report->image ?? 'Tidak ada gambar',
+            $location ?: 'Lokasi Tidak Diketahui',
+            $totalVote === 0 ? 'Tidak ada voting' : $totalVote,
+            $report->description ?? 'Tidak ada deskripsi',
+            $reportDate,
+            optional($report->response)->response_status ?? 'Tidak ada status',
+            optional($report->response)->staf_id ?? 'Tidak ada staf',
         ];
+    }
+
+    /**
+     * Apply styling to Excel worksheet.
+     *
+     * @param Worksheet $sheet
+     */
+    public function styles(Worksheet $sheet)
+    {
+        // Style the first row (headers)
+        $sheet->getStyle('1')->getFont()->setBold(true);
+
+        // Optional: Set column widths
+        $sheet->getColumnDimension('A')->setWidth(10);  // ID
+        $sheet->getColumnDimension('B')->setWidth(25);  // Email
+        $sheet->getColumnDimension('C')->setWidth(20);  // Gambar
+        $sheet->getColumnDimension('D')->setWidth(30);  // Lokasi
+        $sheet->getColumnDimension('G')->setWidth(25);  // Tanggal
     }
 }

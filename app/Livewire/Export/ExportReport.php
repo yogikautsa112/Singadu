@@ -9,32 +9,68 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class ExportReport extends Component
 {
+    public $showDateModal = false;
     public $selectedDateRange = 'all'; // Default filter
-    public $filteredDate = null; // For custom date filter
-
-    // Watch for changes in selectedDateRange and filteredDate
-    protected $updated = [
-        'selectedDateRange' => 'export',
-        'filteredDate' => 'export'
-    ];
+    public $startDate = null;
+    public $endDate = null;
 
     // Function to handle the export
     public function export()
     {
         $filteredDate = null;
 
-        if ($this->selectedDateRange == 'today') {
-            $filteredDate = now()->format('Y-m-d'); // Today
-        } elseif ($this->selectedDateRange == 'this_week') {
-            $filteredDate = now()->startOfWeek()->format('Y-m-d'); // Start of this week
-        } elseif ($this->selectedDateRange == 'this_month') {
-            $filteredDate = now()->startOfMonth()->format('Y-m-d'); // Start of this month
-        } elseif ($this->selectedDateRange == 'custom' && $this->filteredDate) {
-            $filteredDate = $this->filteredDate; // Use custom date if selected
-        }
+        switch ($this->selectedDateRange) {
+            case 'today':
+                $filteredDate = [
+                    'start' => now()->startOfDay(),
+                    'end' => now()->endOfDay()
+                ];
+                break;
+            case 'this_week':
+                $filteredDate = [
+                    'start' => now()->startOfWeek(),
+                    'end' => now()->endOfWeek()
+                ];
+                break;
+            case 'this_month':
+                $filteredDate = [
+                    'start' => now()->startOfMonth(),
+                    'end' => now()->endOfMonth()
+                ];
+                break;
+            case 'custom':
+                $this->validate([
+                    'startDate' => 'required|date',
+                    'endDate' => 'required|date|after_or_equal:startDate'
+                ]);
 
-        // Pass the filtered date to the export class and trigger the download
+                $filteredDate = [
+                    'start' => Carbon::parse($this->startDate)->startOfDay(),
+                    'end' => Carbon::parse($this->endDate)->endOfDay()
+                ];
+                break;
+            default:
+                $filteredDate = null;
+        }
         return Excel::download(new ReportsExport($filteredDate), 'reports.xlsx');
+    }
+    public function exportAll()
+    {
+        $this->selectedDateRange = 'all';
+        return $this->export();
+    }
+
+    public function openDateModal()
+    {
+        $this->selectedDateRange = 'custom';
+        $this->showDateModal = true;
+    }
+
+    public function closeDateModal()
+    {
+        $this->showDateModal = false;
+        $this->reset(['startDate', 'endDate']);
+        $this->selectedDateRange = 'all';
     }
     public function render()
     {

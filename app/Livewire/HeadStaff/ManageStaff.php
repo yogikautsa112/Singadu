@@ -28,8 +28,8 @@ class ManageStaff extends Component
         User::create([
             'name' => $this->name,
             'email' => $this->email,
-            'password' => bcrypt($this->password), // Default password from the first 4 characters of the email
-            'role' => 'staff', // Assign the 'staff' role
+            'password' => bcrypt($this->password), 
+            'role' => 'staff',
         ]);
 
         Toaster::success('User created successfully.');
@@ -40,20 +40,23 @@ class ManageStaff extends Component
     public function deleteStaff($staffId)
     {
         $staff = User::find($staffId);
-
+    
         if ($staff) {
             $hasResponses = $staff->reports()->whereHas('response')->exists();
-
+    
             if (!$hasResponses) {
                 $staff->delete();
-                Toaster::success('Staff deleted successfully.');
-                $this->staffs = User::where('role', 'staff')->get(); // Refresh staff list
+                Toaster::success('Staff berhasil dihapus.');
+                
+                $this->staffs = User::where('role', 'staff')->get();
             } else {
-                // If there are responses, show an error message
-                Flasher()->error('Staff cannot be deleted as they have associated responses.');
+                Flasher()->error('Staff tidak bisa dihapus karena sudah memiliki tanggapan.');
             }
+        } else {
+            Flasher()->error('Staff tidak ditemukan.');
         }
     }
+    
 
 
     public function resetPassword($staffId)
@@ -61,7 +64,6 @@ class ManageStaff extends Component
         $staff = User::find($staffId);
 
         if ($staff) {
-            // Reset password to the first 4 characters of the email
             $newPassword = substr($staff->email, 0, 4);
             $staff->password = bcrypt($newPassword);
             $staff->save();
@@ -78,6 +80,6 @@ class ManageStaff extends Component
     {
         $this->name = '';
         $this->email = '';
-        $this->password = ''; // Reset password field
+        $this->password = '';
     }
 }

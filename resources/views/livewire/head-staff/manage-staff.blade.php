@@ -62,11 +62,14 @@
                                 <td>{{ $staff->name }}</td>
                                 <td>{{ $staff->email }}</td>
                                 <td class="flex gap-2">
-                                    <!-- Action buttons (e.g., delete, reset password) -->
-                                    <button wire:click="deleteStaff({{ $staff->id }})"
-                                        class="btn btn-error btn-sm">Delete</button>
-                                    <button wire:click="resetPassword({{ $staff->id }})"
-                                        class="btn btn-warning btn-sm">Reset Password</button>
+                                    @if (optional($staff->response)->response_status)
+                                        <button disabled class="btn btn-secondary btn-sm">Already Responded</button>
+                                    @else
+                                        <button wire:click="deleteStaff({{ $staff->id }})"
+                                            class="btn btn-error btn-sm">Delete</button>
+                                        <button wire:click="resetPassword({{ $staff->id }})"
+                                            class="btn btn-warning btn-sm">Reset Password</button>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach

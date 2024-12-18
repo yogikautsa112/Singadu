@@ -38,7 +38,7 @@
         <!-- Page Content -->
         <main>
             {{ $slot }}
-            <x-toaster-hub /> 
+            <x-toaster-hub />
         </main>
     </div>
 

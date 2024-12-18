@@ -12,6 +12,9 @@ class ManageResponse extends Component
     public $reportId;
     public $progressDescription;
     public $showAddProgressModal = false;
+    public $showDeleteProgressModal = false;
+public $progressIdToDelete;
+
 
     protected $rules = [
         'progressDescription' => 'required|string|max:255',
@@ -52,6 +55,36 @@ class ManageResponse extends Component
         $this->resetForm();
         Toaster::success('Progress berhasil ditambahkan.');
     }
+
+    public function confirmDeleteProgress($progressId)
+{
+    $this->progressIdToDelete = $progressId;
+    $this->showDeleteProgressModal = true;
+}
+
+public function deleteProgress()
+{
+    try {
+        // Hapus progress berdasarkan ID
+        $progress = Progress::findOrFail($this->progressIdToDelete);
+        $progress->delete();
+
+        // Refresh data report untuk memperbarui tampilan
+        $this->report->refresh();
+
+        // Emit notifikasi sukses
+        $this->dispatch('progressDeleted', 'Progress berhasil dihapus.');
+
+        // Reset state modal
+        $this->reset('showDeleteProgressModal', 'progressIdToDelete');
+    } catch (\Exception $e) {
+        // Emit notifikasi error
+        $this->dispatch('progressDeletionFailed', 'Gagal menghapus progress.');
+
+        // Reset state modal
+        $this->reset('showDeleteProgressModal', 'progressIdToDelete');
+    }
+}
 
 
     private function getReportWithResponse()
